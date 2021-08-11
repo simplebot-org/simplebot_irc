@@ -1,4 +1,5 @@
 import string
+import time
 from threading import Thread
 
 import irc.bot
@@ -30,6 +31,8 @@ class PuppetReactor(irc.client.SimpleIRCClient):
             cnn = self.reactor.server()
             cnn.channels = set()
             cnn.addr = addr
+            cnn.welcomed = False
+            cnn.pending_actions = []
             self.puppets[addr] = cnn
         return cnn
 
@@ -55,10 +58,19 @@ class PuppetReactor(irc.client.SimpleIRCClient):
                 cnn.close()
 
     def send_message(self, addr: str, target: str, text: str) -> None:
-        self._get_connected_puppet(addr).privmsg(target, text)
+        self._send_command(addr, "privmsg", target, text)
 
     def send_action(self, addr: str, target: str, text: str) -> None:
-        self._get_connected_puppet(addr).action(target, text)
+        self._send_command(addr, "action", target, text)
+
+    def _send_command(self, addr: str, command: str, *args) -> None:
+        had_puppet = addr in self.puppets
+        cnn = self._get_puppet(addr)
+        if cnn.welcomed:
+            getattr(cnn, command)(*args)
+        else:
+            cnn.pending_actions.append((command, *args))
+            self._get_connected_puppet(addr)
 
     def _irc2dc(self, addr: str, e, impersonate: bool = True) -> None:
         if impersonate:
@@ -85,8 +97,12 @@ class PuppetReactor(irc.client.SimpleIRCClient):
 
     @staticmethod
     def on_welcome(c, e) -> None:
+        c.welcomed = True
         for channel in c.channels:
             c.join(channel)
+        while c.pendig_actions:
+            args = c.pendig_actions.pop(0)
+            getattr(c, args[0])(*args[1:])
 
     def on_privmsg(self, c, e) -> None:
         self._irc2dc(c.addr, e)
