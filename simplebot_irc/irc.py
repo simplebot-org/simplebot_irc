@@ -70,7 +70,8 @@ class PuppetReactor(irc.client.SimpleIRCClient):
             getattr(cnn, command)(*args)
         else:
             cnn.pending_actions.append((command, *args))
-            self._get_connected_puppet(addr)
+            if not had_puppet:
+                self._get_connected_puppet(addr)
 
     def _irc2dc(self, addr: str, e, impersonate: bool = True) -> None:
         if impersonate:
@@ -115,6 +116,12 @@ class PuppetReactor(irc.client.SimpleIRCClient):
     def on_nosuchnick(self, c, e) -> None:
         e.arguments = ["❌ " + ":".join(e.arguments)]
         self._irc2dc(c.addr, e, impersonate=False)
+
+    def on_disconnect(self, c, e) -> None:
+        c.welcomed = False
+        if c.addr in self.puppets:
+            time.sleep(5)
+            self._get_connected_puppet(c.addr)  # reconnect
 
 
 class IRCBot(irc.bot.SingleServerIRCBot):
