@@ -46,11 +46,17 @@ def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None
     channel = db.get_channel_by_gid(chat.id)
     if channel:
         me = bot.self_contact
-        if me == contact or len(chat.get_contacts()) <= 1:
+        contacts = chat.get_contacts()
+        if me == contact or len(contacts) <= 1:
             db.remove_channel(channel)
             irc_bridge.leave_channel(channel)
+            for cont in contacts:
+                if cont != me:
+                    irc_bridge.preactor.leave_channel(cont.addr, channel)
         else:
             irc_bridge.preactor.leave_channel(contact.addr, channel)
+        return
+
     pvchat = db.get_pvchat_by_gid(chat.id)
     if pvchat:
         me = bot.self_contact
