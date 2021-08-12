@@ -28,6 +28,10 @@ class DBManager:
                 (channel TEXT PRIMARY KEY)"""
             )
 
+        for addr, nick in self.db.execute("SELECT addr, nick from nicks"):
+            if nick != nick.rstrip("_"):
+                self.set_nick(addr, nick.rstrip("_"))
+
     def execute(self, statement: str, args=()) -> sqlite3.Cursor:
         return self.db.execute(statement, args)
 
