@@ -50,7 +50,7 @@ class DBManager:
         ).fetchone()
         if r:
             return r[0]
-        chat = self.bot.create_group(nick + "[irc]", [addr])
+        chat = self.bot.create_group(nick + " [irc]", [addr])
         self.commit("INSERT INTO pvchats VALUES (?,?,?)", (addr, nick, chat.id))
         return chat.id
 
@@ -90,7 +90,7 @@ class DBManager:
             return r[0]
         allowed = string.ascii_letters + string.digits + r"_-\[]{}^`|"
         name = self.bot.get_contact(addr).name
-        name = "".join(list(filter(allowed.__contains__, name)))[:12]
+        name = "".join(list(filter(allowed.__contains__, name)))[:13]
         nick = name
         i = 2
         while True:
@@ -98,7 +98,7 @@ class DBManager:
                 self.set_nick(addr, nick)
                 break
             nick = f"{name}{i}"
-            if len(nick) > 12:
+            if len(nick) > 13:
                 nick = name[: len(name) - 1]
             i += 1
         return nick

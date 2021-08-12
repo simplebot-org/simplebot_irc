@@ -65,7 +65,7 @@ def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None
 
 
 @simplebot.filter(name=__name__)
-def filter_messages(message: Message, replies: Replies) -> None:
+def filter_messages(bot: DeltaBot, message: Message, replies: Replies) -> None:
     """Process messages sent to an IRC channel."""
     target = db.get_channel_by_gid(message.chat.id)
     if target:
@@ -76,8 +76,17 @@ def filter_messages(message: Message, replies: Replies) -> None:
             target = pvchat["nick"]
             addr = pvchat["addr"]
     if target:
-        if message.quoted_text:
-            text = "<{}> ".format(" ".join(message.quoted_text.split("\n")))
+        quoted_msg = message.quote
+        if quoted_msg:
+            quoted_addr = quoted_msg.get_sender_contact().addr
+            if quoted_addr == bot.self_contact.addr:
+                quoted_nick = quoted_msg.override_sender_name or irc_bridge.nick
+            else:
+                quoted_nick = db.get_nick(quoted_addr)
+            quote = " ".join(message.quoted_text.split("\n"))
+            if len(quote) > 40:
+                quote = quote[:40] + "..."
+            text = f"<{quoted_nick}: {quote}> "
         else:
             text = ""
         if message.filename:
@@ -148,7 +157,7 @@ def nick(args: list, message: Message, replies: Replies) -> None:
             replies.add(text="** Nick already taken")
         else:
             db.set_nick(addr, new_nick)
-            irc_bridge.preactor.puppets[addr].nick(new_nick + "[dc]")
+            irc_bridge.preactor.set_nick(addr, new_nick)
             replies.add(text="** Nick: {}".format(new_nick))
     else:
         replies.add(text="** Nick: {}".format(db.get_nick(addr)))

@@ -39,9 +39,34 @@ class PuppetReactor(irc.client.SimpleIRCClient):
     def _get_connected_puppet(self, addr: str) -> irc.client.ServerConnection:
         cnn = self._get_puppet(addr)
         if not cnn.is_connected():
-            nick = self.db.get_nick(addr) + "[dc]"
+            nick = self.db.get_nick(addr) + "|dc"
             cnn.connect(self.server, self.port, nick, ircname=nick)
         return cnn
+
+    def _send_command(self, addr: str, command: str, *args) -> None:
+        had_puppet = addr in self.puppets
+        cnn = self._get_puppet(addr)
+        if cnn.welcomed:
+            getattr(cnn, command)(*args)
+        else:
+            cnn.pending_actions.append((command, *args))
+            if not had_puppet:
+                self._get_connected_puppet(addr)
+
+    def _irc2dc(self, addr: str, e, impersonate: bool = True) -> None:
+        if impersonate:
+            sender = e.source.nick
+        else:
+            sender = None
+        gid = self.db.get_pvchat(addr, e.source.nick)
+        replies = Replies(self.dbot, logger=self.dbot.logger)
+        replies.add(
+            text=" ".join(e.arguments), sender=sender, chat=self.dbot.get_chat(gid)
+        )
+        replies.send_reply_messages()
+
+    def set_nick(self, addr: str, nick: str) -> None:
+        self.puppets[addr].nick(nick + "|dc")
 
     def join_channel(self, addr: str, channel: str) -> None:
         cnn = self._get_connected_puppet(addr)
@@ -63,38 +88,16 @@ class PuppetReactor(irc.client.SimpleIRCClient):
     def send_action(self, addr: str, target: str, text: str) -> None:
         self._send_command(addr, "action", target, text)
 
-    def _send_command(self, addr: str, command: str, *args) -> None:
-        had_puppet = addr in self.puppets
-        cnn = self._get_puppet(addr)
-        if cnn.welcomed:
-            getattr(cnn, command)(*args)
-        else:
-            cnn.pending_actions.append((command, *args))
-            if not had_puppet:
-                self._get_connected_puppet(addr)
-
-    def _irc2dc(self, addr: str, e, impersonate: bool = True) -> None:
-        if impersonate:
-            sender = "{}[irc]".format(e.source.nick)
-        else:
-            sender = None
-        gid = self.db.get_pvchat(addr, e.source.nick)
-        replies = Replies(self.dbot, logger=self.dbot.logger)
-        replies.add(
-            text=" ".join(e.arguments), sender=sender, chat=self.dbot.get_chat(gid)
-        )
-        replies.send_reply_messages()
-
     # EVENTS:
 
     def on_nicknameinuse(self, c, e) -> None:
         nick = self.db.get_nick(c.addr)
-        if len(nick) < 12:
+        if len(nick) < 13:
             nick += "_"
         else:
             nick = nick[: len(nick) - 1]
         self.db.set_nick(c.addr, nick)
-        c.nick(nick + "[dc]")
+        c.nick(nick + "|dc")
 
     @staticmethod
     def on_welcome(c, e) -> None:
@@ -161,14 +164,15 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         for cnn in self.preactor.puppets.values():
             if cnn.get_nickname() == e.source.nick:
                 return
-        sender = "{}[irc]".format(e.source.nick)
         gid = self.db.get_chat(e.target)
         if not gid:
             self.dbot.logger.warning("Chat not found for room: %s", e.target)
             return
         replies = Replies(self.dbot, logger=self.dbot.logger)
         replies.add(
-            text=" ".join(e.arguments), sender=sender, chat=self.dbot.get_chat(gid)
+            text=" ".join(e.arguments),
+            sender=e.source.nick,
+            chat=self.dbot.get_chat(gid),
         )
         replies.send_reply_messages()
 
