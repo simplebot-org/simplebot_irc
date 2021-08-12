@@ -294,6 +294,9 @@ def _add_contact(chat: Chat, contact: Contact) -> None:
 
 def _upload(filename: str, url: str) -> Optional[str]:
     try:
-        return session.post(url, files=dict(file=open(filename, "rb"))).text.strip()
+        with open(filename, "rb") as file:
+            with session.post(url, files=dict(file=file)) as resp:
+                resp.raise_for_status()
+                return resp.text.strip()
     except Exception:
         return None
