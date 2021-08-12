@@ -131,6 +131,9 @@ class PuppetReactor(irc.client.SimpleIRCClient):
             time.sleep(5)
             self._get_connected_puppet(conn.addr)  # reconnect
 
+    def on_error(self, conn, event) -> None:
+        self.dbot.logger.error("[%s] %s", conn.addr, ":".join(event.arguments))
+
 
 class IRCBot(irc.bot.SingleServerIRCBot):
     def __init__(
@@ -188,6 +191,9 @@ class IRCBot(irc.bot.SingleServerIRCBot):
     def on_currenttopic(self, conn, event) -> None:
         chan = self.channels[event.arguments[0]]
         chan.topic = event.arguments[1]
+
+    def on_error(self, conn, event) -> None:
+        self.dbot.logger.error("[bot] %s", ":".join(event.arguments))
 
     def join_channel(self, name: str) -> None:
         self.connection.join(name)
