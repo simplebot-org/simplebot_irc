@@ -203,5 +203,5 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 
 
 def sanitize_nick(nick: str) -> str:
-    allowed = string.ascii_letters + string.digits + "_-\[]{}^`|"
+    allowed = string.ascii_letters + string.digits + r"_-\[]{}^`|"
     return "".join(list(filter(allowed.__contains__, nick)))[:16]

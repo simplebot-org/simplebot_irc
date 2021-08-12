@@ -88,7 +88,7 @@ class DBManager:
         r = self.execute("SELECT nick from nicks WHERE addr=?", (addr,)).fetchone()
         if r:
             return r[0]
-        allowed = string.ascii_letters + string.digits + "_-\[]{}^`|"
+        allowed = string.ascii_letters + string.digits + r"_-\[]{}^`|"
         name = self.bot.get_contact(addr).name
         name = "".join(list(filter(allowed.__contains__, name)))[:12]
         nick = name
