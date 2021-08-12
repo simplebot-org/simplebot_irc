@@ -92,41 +92,41 @@ class PuppetReactor(irc.client.SimpleIRCClient):
 
     # EVENTS:
 
-    def on_nicknameinuse(self, c, e) -> None:
-        nick = self.db.get_nick(c.addr)
+    def on_nicknameinuse(self, conn, event) -> None:
+        nick = self.db.get_nick(conn.addr)
         if len(nick) < 13:
             nick += "_"
         else:
             nick = nick[: len(nick) - 1]
-        self.db.set_nick(c.addr, nick)
-        c.nick(nick + "|dc")
+        self.db.set_nick(conn.addr, nick)
+        conn.nick(nick + "|dc")
 
     @staticmethod
-    def on_welcome(c, e) -> None:
-        c.welcomed = True
-        for channel in c.channels:
-            c.join(channel)
-        while c.pending_actions:
-            args = c.pending_actions.pop(0)
-            getattr(c, args[0])(*args[1:])
+    def on_welcome(conn, event) -> None:
+        conn.welcomed = True
+        for channel in conn.channels:
+            conn.join(channel)
+        while conn.pending_actions:
+            args = conn.pending_actions.pop(0)
+            getattr(conn, args[0])(*args[1:])
 
-    def on_privmsg(self, c, e) -> None:
-        self._irc2dc(c.addr, e)
+    def on_privmsg(self, conn, event) -> None:
+        self._irc2dc(conn.addr, event)
 
-    def on_action(self, c, e) -> None:
-        if not e.target.startswith(tuple("&#+!")):
-            e.arguments.insert(0, "/me")
-            self._irc2dc(c.addr, e)
+    def on_action(self, conn, event) -> None:
+        if not event.target.startswith(tuple("&#+!")):
+            event.arguments.insert(0, "/me")
+            self._irc2dc(conn.addr, event)
 
-    def on_nosuchnick(self, c, e) -> None:
-        e.arguments = ["❌ " + ":".join(e.arguments)]
-        self._irc2dc(c.addr, e, impersonate=False)
+    def on_nosuchnick(self, conn, event) -> None:
+        event.arguments = ["❌ " + ":".join(event.arguments)]
+        self._irc2dc(conn.addr, event, impersonate=False)
 
-    def on_disconnect(self, c, e) -> None:
-        c.welcomed = False
-        if c.addr in self.puppets:
+    def on_disconnect(self, conn, event) -> None:
+        conn.welcomed = False
+        if conn.addr in self.puppets:
             time.sleep(5)
-            self._get_connected_puppet(c.addr)  # reconnect
+            self._get_connected_puppet(conn.addr)  # reconnect
 
 
 class IRCBot(irc.bot.SingleServerIRCBot):
@@ -141,50 +141,50 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         self.preactor = PuppetReactor(server, port, db, dbot)
         self.nick_counter = 1
 
-    def on_nicknameinuse(self, c, e) -> None:
+    def _irc2dc(self, event) -> None:
+        for cnn in self.preactor.puppets.values():
+            if cnn.get_nickname() == event.source.nick:
+                return
+        gid = self.db.get_chat(event.target)
+        if not gid:
+            self.dbot.logger.warning("Chat not found for room: %s", event.target)
+            return
+        replies = Replies(self.dbot, logger=self.dbot.logger)
+        replies.add(
+            text=" ".join(event.arguments),
+            sender=event.source.nick,
+            chat=self.dbot.get_chat(gid),
+        )
+        replies.send_reply_messages()
+
+    def on_nicknameinuse(self, conn, event) -> None:
         self.nick_counter += 1
         nick = f"{self.nick}{self.nick_counter}"
         if len(nick) > 16:
             self.nick = self.nick[: len(self.nick) - 1]
             self.nick_counter = 1
             nick = self.nick
-        c.nick(nick)
+        conn.nick(nick)
 
-    def on_welcome(self, c, e) -> None:
+    def on_welcome(self, conn, event) -> None:
         for chan, _ in self.db.get_channels():
-            c.join(chan)
+            conn.join(chan)
         Thread(target=self.preactor.start, daemon=True).start()
 
-    def on_action(self, c, e) -> None:
-        e.arguments.insert(0, "/me")
-        self._irc2dc(e)
+    def on_action(self, conn, event) -> None:
+        event.arguments.insert(0, "/me")
+        self._irc2dc(event)
 
-    def on_pubmsg(self, c, e) -> None:
-        self._irc2dc(e)
+    def on_pubmsg(self, conn, event) -> None:
+        self._irc2dc(event)
 
-    def _irc2dc(self, e) -> None:
-        for cnn in self.preactor.puppets.values():
-            if cnn.get_nickname() == e.source.nick:
-                return
-        gid = self.db.get_chat(e.target)
-        if not gid:
-            self.dbot.logger.warning("Chat not found for room: %s", e.target)
-            return
-        replies = Replies(self.dbot, logger=self.dbot.logger)
-        replies.add(
-            text=" ".join(e.arguments),
-            sender=e.source.nick,
-            chat=self.dbot.get_chat(gid),
-        )
-        replies.send_reply_messages()
-
-    def on_notopic(self, c, e) -> None:
-        chan = self.channels[e.arguments[0]]
+    def on_notopic(self, conn, event) -> None:
+        chan = self.channels[event.arguments[0]]
         chan.topic = "-"
 
-    def on_currenttopic(self, c, e) -> None:
-        chan = self.channels[e.arguments[0]]
-        chan.topic = e.arguments[1]
+    def on_currenttopic(self, conn, event) -> None:
+        chan = self.channels[event.arguments[0]]
+        chan.topic = event.arguments[1]
 
     def join_channel(self, name: str) -> None:
         self.connection.join(name)
