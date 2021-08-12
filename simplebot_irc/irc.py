@@ -1,9 +1,11 @@
 import string
 import time
 from threading import Thread
+from typing import Dict
 
 import irc.bot
 import irc.client
+from irc.client import ServerConnection
 from simplebot.bot import DeltaBot, Replies
 
 from .database import DBManager
@@ -16,13 +18,13 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         self.port = port
         self.dbot = dbot
         self.db = db
-        self.puppets = dict()
+        self.puppets: Dict[str, ServerConnection] = dict()
         for chan, gid in db.get_channels():
             for c in dbot.get_chat(gid).get_contacts():
                 if dbot.self_contact == c:
                     continue
                 self._get_puppet(c.addr).channels.add(chan)
-        for addr in self.puppets.keys():
+        for addr in self.puppets:
             self._get_connected_puppet(addr)
 
     def _get_puppet(self, addr: str) -> irc.client.ServerConnection:

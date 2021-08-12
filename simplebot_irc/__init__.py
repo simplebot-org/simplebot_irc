@@ -45,13 +45,12 @@ def deltabot_member_added(chat: Chat, contact: Contact) -> None:
 def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None:
     channel = db.get_channel_by_gid(chat.id)
     if channel:
-        me = bot.self_contact
         contacts = chat.get_contacts()
-        if me == contact or len(contacts) <= 1:
+        if bot.self_contact == contact or len(contacts) <= 1:
             db.remove_channel(channel)
             irc_bridge.leave_channel(channel)
             for cont in contacts:
-                if cont != me:
+                if cont != bot.self_contact:
                     irc_bridge.preactor.leave_channel(cont.addr, channel)
         else:
             irc_bridge.preactor.leave_channel(contact.addr, channel)
@@ -59,13 +58,12 @@ def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None
 
     pvchat = db.get_pvchat_by_gid(chat.id)
     if pvchat:
-        me = bot.self_contact
-        if me == contact or len(chat.get_contacts()) <= 1:
+        if bot.self_contact == contact or len(chat.get_contacts()) <= 1:
             db.remove_pvchat(pvchat["addr"], pvchat["nick"])
 
 
 @simplebot.filter(name=__name__)
-def filter_messages(bot: DeltaBot, message: Message, replies: Replies) -> None:
+def filter_messages(bot: DeltaBot, message: Message) -> None:
     """Process messages sent to an IRC channel."""
     target = db.get_channel_by_gid(message.chat.id)
     if target:
@@ -102,7 +100,7 @@ def filter_messages(bot: DeltaBot, message: Message, replies: Replies) -> None:
 
 
 @simplebot.command
-def me(payload: str, message: Message, replies: Replies) -> None:
+def me(payload: str, message: Message) -> None:
     """Send a message to IRC using the /me IRC command."""
     target = db.get_channel_by_gid(message.chat.id)
     if target:
@@ -142,8 +140,8 @@ def names(message: Message, replies: Replies) -> None:
     replies.add(text=members)
 
 
-@simplebot.command
-def nick(args: list, message: Message, replies: Replies) -> None:
+@simplebot.command(name="/nick")
+def nick_cmd(args: list, message: Message, replies: Replies) -> None:
     """Set your IRC nick or display your current nick if no new nick is given."""
     addr = message.get_sender_contact().addr
     if args:
