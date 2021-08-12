@@ -1,8 +1,11 @@
+import functools
 import os
 import re
 from threading import Thread
 from time import sleep
+from typing import Optional
 
+import requests
 import simplebot
 from deltachat import Chat, Contact, Message
 from pkg_resources import DistributionNotFound, get_distribution
@@ -17,12 +20,20 @@ except DistributionNotFound:
     # package is not installed
     __version__ = "0.0.0.dev0-unknown"
 nick_re = re.compile(r"[-_a-zA-Z0-9]{1,30}$")
+session = requests.Session()
+session.headers.update(
+    {
+        "user-agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0"
+    }
+)
+session.request = functools.partial(session.request, timeout=60 * 5)
 db: DBManager
 irc_bridge: IRCBot
 
 
 @simplebot.hookimpl
 def deltabot_init(bot: DeltaBot) -> None:
+    _getdefault(bot, "uploads_url", "https://0x0.st/")
     _getdefault(bot, "nick", "DC-Bridge")
     _getdefault(bot, "host", "irc.libera.chat")
     _getdefault(bot, "port", "6667")
@@ -93,7 +104,13 @@ def filter_messages(bot: DeltaBot, message: Message) -> None:
         else:
             text = ""
         if message.filename:
-            text += "[File] "
+            url = _getdefault(bot, "uploads_url", "").strip()
+            if url:
+                url = _upload(message.filename, url)
+            if url:
+                text += f"{url} - "
+            else:
+                text += "[File] - "
         text += message.text
         if not text:
             return
@@ -273,3 +290,10 @@ def _add_contact(chat: Chat, contact: Contact) -> None:
     if img_path and not os.path.exists(img_path):
         chat.remove_profile_image()
     chat.add_contact(contact)
+
+
+def _upload(filename: str, url: str) -> Optional[str]:
+    try:
+        return session.post(url, files=dict(file=open(filename, "rb"))).text.strip()
+    except Exception:
+        return None

@@ -43,6 +43,7 @@ if __name__ == "__main__":
         install_requires=[
             "simplebot",
             "irc",
+            "requests",
         ],
         entry_points={
             "simplebot.plugins": "{0} = {0}".format(MODULE_NAME),
