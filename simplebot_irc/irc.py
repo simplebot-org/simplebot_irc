@@ -106,8 +106,8 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         c.welcomed = True
         for channel in c.channels:
             c.join(channel)
-        while c.pendig_actions:
-            args = c.pendig_actions.pop(0)
+        while c.pending_actions:
+            args = c.pending_actions.pop(0)
             getattr(c, args[0])(*args[1:])
 
     def on_privmsg(self, c, e) -> None:
