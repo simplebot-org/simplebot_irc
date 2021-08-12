@@ -300,5 +300,5 @@ def _upload(filename: str, url: str) -> Optional[str]:
             with session.post(url, files=dict(file=file)) as resp:
                 resp.raise_for_status()
                 return resp.text.strip()
-    except Exception:
+    except requests.RequestException:
         return None
