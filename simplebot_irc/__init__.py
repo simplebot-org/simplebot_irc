@@ -108,9 +108,11 @@ def filter_messages(bot: DeltaBot, message: Message) -> None:
             if url:
                 url = _upload(message.filename, url)
             if url:
-                text += f"{url} - "
+                text += url
             else:
-                text += "[File] - "
+                text += "[File]"
+            if message.text:
+                text += " - "
         text += message.text
         if not text:
             return
