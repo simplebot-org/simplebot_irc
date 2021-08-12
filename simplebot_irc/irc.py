@@ -125,6 +125,9 @@ class PuppetReactor(irc.client.SimpleIRCClient):
     def on_disconnect(self, conn, event) -> None:
         conn.welcomed = False
         if conn.addr in self.puppets:
+            self.dbot.logger.warning(
+                f"Disconnected: {conn.get_nickname()} ({conn.addr})"
+            )
             time.sleep(5)
             self._get_connected_puppet(conn.addr)  # reconnect
 
