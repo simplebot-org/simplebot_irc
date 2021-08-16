@@ -78,9 +78,12 @@ def deltabot_member_removed(bot: DeltaBot, chat: Chat, contact: Contact) -> None
             db.remove_pvchat(pvchat["addr"], pvchat["nick"])
 
 
-@simplebot.filter(name=__name__)
-def filter_messages(bot: DeltaBot, message: Message) -> None:
-    """Process messages sent to an IRC channel."""
+@simplebot.filter
+def dc2irc(bot: DeltaBot, message: Message) -> None:
+    """I will send to IRC any message you send in a Delta Chat group bridged to an IRC room.
+
+    At the same time, I will send to the Delta Chat group any message sent in the bridged IRC room.
+    """
     target = db.get_channel_by_gid(message.chat.id)
     if target:
         addr = message.get_sender_contact().addr
