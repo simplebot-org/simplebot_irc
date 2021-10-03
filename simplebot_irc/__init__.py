@@ -122,7 +122,6 @@ def dc2irc(bot: DeltaBot, message: Message) -> None:
         if not text:
             return
 
-        text = " ".join(text.split("\n"))
         n = 450
         url = _getdefault(bot, "uploads_url", "").strip()
         if len(text) > n and url:
@@ -130,6 +129,7 @@ def dc2irc(bot: DeltaBot, message: Message) -> None:
                 url = _upload("long-text-message.txt", file2, url)
             irc_bridge.preactor.send_message(addr, target, f"Long message: {url}")
         else:
+            text = " ".join(text.split("\n"))
             for fragment in [text[i : i + n] for i in range(0, len(text), n)]:
                 irc_bridge.preactor.send_message(addr, target, fragment)
 
