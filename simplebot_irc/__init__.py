@@ -155,7 +155,7 @@ def topic(message: Message, replies: Replies) -> None:
     """Show IRC channel topic."""
     chan = db.get_channel_by_gid(message.chat.id)
     if not chan:
-        replies.add(text="This is not an IRC channel")
+        replies.add(text="❌ This is not an IRC channel")
     else:
         replies.add(text=f"Topic:\n{irc_bridge.get_topic(chan)}")
 
@@ -165,7 +165,7 @@ def names(message: Message, replies: Replies) -> None:
     """Show list of IRC channel members."""
     chan = db.get_channel_by_gid(message.chat.id)
     if not chan:
-        replies.add(text="This is not an IRC channel")
+        replies.add(text="❌ This is not an IRC channel")
         return
 
     members = "Members:\n"
@@ -183,11 +183,11 @@ def nick_cmd(args: list, message: Message, replies: Replies) -> None:
         new_nick = "_".join(args)
         if not nick_re.match(new_nick):
             replies.add(
-                text="** Invalid nick, only letters and numbers are"
+                text="❌ Invalid nick, only letters and numbers are"
                 " allowed, and nick should be less than 30 characters"
             )
         elif db.get_addr(new_nick):
-            replies.add(text="** Nick already taken")
+            replies.add(text="❌ Nick already taken")
         else:
             db.set_nick(addr, new_nick)
             irc_bridge.preactor.set_nick(addr, new_nick)
@@ -200,7 +200,7 @@ def nick_cmd(args: list, message: Message, replies: Replies) -> None:
 def query(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> None:
     """Open a private chat with an IRC user."""
     if not payload:
-        replies.add(text="Wrong syntax")
+        replies.add(text="❌ Wrong syntax")
         return
     g = bot.get_chat(db.get_pvchat(message.get_sender_contact().addr, payload))
     replies.add(text=f"**Send messages to {payload} here.**", chat=g)
@@ -211,15 +211,17 @@ def join(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> Non
     """Join the given IRC channel."""
     sender = message.get_sender_contact()
     if not payload:
-        replies.add(text="Wrong syntax")
+        replies.add(text="❌ Wrong syntax")
         return
     if not bot.is_admin(sender.addr) and not db.is_whitelisted(payload):
-        replies.add(text="That channel isn't in the whitelist")
+        replies.add(text="❌ That channel isn't in the whitelist")
         return
 
     g = bot.get_chat(db.get_chat(payload))
     if g and sender in g.get_contacts():
-        replies.add(text="You are already a member of this group", chat=g)
+        replies.add(
+            text=f"❌ {sender.addr}, you are already a member of this group", chat=g
+        )
         return
     if g is None:
         chat = bot.create_group(payload, [sender])
@@ -247,7 +249,7 @@ def remove(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> N
         payload = args[1] if len(args) == 2 else ""
         g = bot.get_chat(db.get_chat(channel))
         if not g or sender not in g.get_contacts():
-            replies.add(text="You are not a member of that channel")
+            replies.add(text="❌ You are not a member of that channel")
             return
 
     if not payload:
@@ -255,7 +257,7 @@ def remove(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> N
     if "@" not in payload:
         t = db.get_addr(payload)
         if not t:
-            replies.add(text=f"Unknow user: {payload}")
+            replies.add(text=f"❌ Unknow user: {payload}")
             return
         payload = t
 
