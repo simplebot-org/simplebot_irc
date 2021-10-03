@@ -1,9 +1,10 @@
 import functools
+import io
 import os
 import re
 from threading import Thread
 from time import sleep
-from typing import Optional
+from typing import IO
 
 import requests
 import simplebot
@@ -109,7 +110,8 @@ def dc2irc(bot: DeltaBot, message: Message) -> None:
         if message.filename:
             url = _getdefault(bot, "uploads_url", "").strip()
             if url:
-                url = _upload(message.filename, url)
+                with open(message.filename, "rb") as file:
+                    url = _upload(message.filename, file, url)
             if url:
                 text += url
             else:
@@ -122,8 +124,14 @@ def dc2irc(bot: DeltaBot, message: Message) -> None:
 
         text = " ".join(text.split("\n"))
         n = 450
-        for fragment in [text[i : i + n] for i in range(0, len(text), n)]:
-            irc_bridge.preactor.send_message(addr, target, fragment)
+        url = _getdefault(bot, "uploads_url", "").strip()
+        if len(text) > n and url:
+            with io.StringIO(text) as file2:
+                url = _upload("long-text-message.txt", file2, url)
+            irc_bridge.preactor.send_message(addr, target, f"Long message: {url}")
+        else:
+            for fragment in [text[i : i + n] for i in range(0, len(text), n)]:
+                irc_bridge.preactor.send_message(addr, target, fragment)
 
 
 @simplebot.command
@@ -297,11 +305,10 @@ def _add_contact(chat: Chat, contact: Contact) -> None:
     chat.add_contact(contact)
 
 
-def _upload(filename: str, url: str) -> Optional[str]:
+def _upload(filename: str, file: IO, url: str) -> str:
     try:
-        with open(filename, "rb") as file:
-            with session.post(url, files=dict(file=file)) as resp:
-                resp.raise_for_status()
-                return resp.text.strip()
+        with session.post(url, files=dict(file=(filename, file))) as resp:
+            resp.raise_for_status()
+            return resp.text.strip()
     except requests.RequestException:
-        return None
+        return ""
