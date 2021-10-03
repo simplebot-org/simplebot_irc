@@ -1,19 +1,13 @@
 """Setup module installation."""
 
-import os
-
 from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     MODULE_NAME = "simplebot_irc"
     DESC = "A plugin for SimpleBot, a Delta Chat(http://delta.chat/) bot"
 
-    with open("README.rst") as fh:
+    with open("README.rst", encoding="utf-8") as fh:
         long_description = fh.read()
-    with open("CHANGELOG.rst") as fh:
-        long_description += fh.read()
-    with open("LICENSE") as fh:
-        long_description += fh.read()
 
     setup(
         name=MODULE_NAME,
@@ -27,6 +21,9 @@ if __name__ == "__main__":
         description=DESC,
         long_description=long_description,
         long_description_content_type="text/x-rst",
+        author="The SimpleBot Contributors",
+        author_email="adbenitez@nauta.cu",
+        url=f"https://github.com/simplebot-org/{MODULE_NAME}",
         keywords="simplebot plugin deltachat",
         license="MPL",
         classifiers=[
@@ -46,6 +43,6 @@ if __name__ == "__main__":
             "requests",
         ],
         entry_points={
-            "simplebot.plugins": "{0} = {0}".format(MODULE_NAME),
+            "simplebot.plugins": f"{MODULE_NAME} = {MODULE_NAME}",
         },
     )

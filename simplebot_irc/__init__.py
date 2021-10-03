@@ -27,7 +27,7 @@ session.headers.update(
         "user-agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0"
     }
 )
-session.request = functools.partial(session.request, timeout=60 * 5)
+session.request = functools.partial(session.request, timeout=15)  # type: ignore
 db: DBManager
 irc_bridge: IRCBot
 
@@ -157,7 +157,7 @@ def topic(message: Message, replies: Replies) -> None:
     if not chan:
         replies.add(text="This is not an IRC channel")
     else:
-        replies.add(text="Topic:\n{}".format(irc_bridge.get_topic(chan)))
+        replies.add(text=f"Topic:\n{irc_bridge.get_topic(chan)}")
 
 
 @simplebot.command
@@ -170,7 +170,7 @@ def names(message: Message, replies: Replies) -> None:
 
     members = "Members:\n"
     for m in sorted(irc_bridge.get_members(chan)):
-        members += "• {}\n".format(m)
+        members += f"• {m}\n"
 
     replies.add(text=members)
 
@@ -191,9 +191,9 @@ def nick_cmd(args: list, message: Message, replies: Replies) -> None:
         else:
             db.set_nick(addr, new_nick)
             irc_bridge.preactor.set_nick(addr, new_nick)
-            replies.add(text="** Nick: {}".format(new_nick))
+            replies.add(text=f"** Nick: {new_nick}")
     else:
-        replies.add(text="** Nick: {}".format(db.get_nick(addr)))
+        replies.add(text=f"** Nick: {db.get_nick(addr)}")
 
 
 @simplebot.command
@@ -231,7 +231,7 @@ def join(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> Non
         chat = bot.get_chat(sender)
 
     nick = db.get_nick(sender.addr)
-    text = "** You joined {} as {}".format(payload, nick)
+    text = f"** You joined {payload} as {nick}"
     replies.add(text=text, chat=chat)
 
 
@@ -255,7 +255,7 @@ def remove(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> N
     if "@" not in payload:
         t = db.get_addr(payload)
         if not t:
-            replies.add(text="Unknow user: {}".format(payload))
+            replies.add(text=f"Unknow user: {payload}")
             return
         payload = t
 
@@ -267,9 +267,9 @@ def remove(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> N
                 return
             s_nick = db.get_nick(sender.addr)
             nick = db.get_nick(c.addr)
-            text = "** {} removed by {}".format(nick, s_nick)
+            text = f"** {nick} removed by {s_nick}"
             bot.get_chat(db.get_chat(channel)).send_text(text)
-            text = "Removed from {} by {}".format(channel, s_nick)
+            text = f"Removed from {channel} by {s_nick}"
             replies.add(text=text, chat=bot.get_chat(c))
             return
 
