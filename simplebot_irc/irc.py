@@ -167,6 +167,7 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         gid = self.db.get_chat(event.target)
         if not gid:
             self.dbot.logger.warning("Chat not found for room: %s", event.target)
+            self.db.remove_channel(event.target)
             self.leave_channel(event.target)
             return
         replies = Replies(self.dbot, logger=self.dbot.logger)
