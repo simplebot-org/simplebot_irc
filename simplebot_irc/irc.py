@@ -25,6 +25,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
                     continue
                 self._get_puppet(c.addr).channels.add(chan)
         for addr in self.puppets:
+            self.dbot.logger.debug("[%s] Connecting puppet...", addr)
             self._get_connected_puppet(addr)
             time.sleep(1)
 
@@ -73,7 +74,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
             conn.welcomed = False
             if conn.addr in self.puppets:
                 self.dbot.logger.warning(
-                    f"Disconnected: {conn.get_nickname()} ({conn.addr})"
+                    f"Reconnecting: {conn.get_nickname()} ({conn.addr})"
                 )
                 time.sleep(15)
                 self._get_connected_puppet(conn.addr)  # reconnect
@@ -151,6 +152,8 @@ class IRCBot(irc.bot.SingleServerIRCBot):
     ) -> None:
         nick = sanitize_nick(nick)
         self.nick = nick
+        self.server = server
+        self.port = port
         super().__init__([(server, port)], nick, nick)
         self.dbot = dbot
         self.db = db
@@ -186,6 +189,7 @@ class IRCBot(irc.bot.SingleServerIRCBot):
     def on_welcome(self, conn, event) -> None:
         for chan, _ in self.db.get_channels():
             conn.join(chan)
+        time.sleep(1)
         Thread(target=self.preactor.start, daemon=True).start()
 
     def on_action(self, conn, event) -> None:
@@ -204,7 +208,21 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         chan.topic = event.arguments[1]
 
     def on_error(self, conn, event) -> None:
-        self.dbot.logger.error("[bot] %s", ":".join(event.arguments))
+        self.dbot.logger.error("[bot] %s", event)
+
+    def on_disconnect(self, conn, event) -> None:
+        while not self._reconnect(conn, event):
+            time.sleep(15)
+
+    def _reconnect(self, conn, event) -> bool:
+        try:
+            self.dbot.logger.warning(f"[bot] Reconnecting...")
+            time.sleep(15)
+            conn.connect(self.server, self.port, self.nick, ircname=self.nick)
+            return True
+        except irc.client.ServerConnectionError as err:
+            self.dbot.logger.error("[bot] %s", err)
+        return False
 
     def join_channel(self, name: str) -> None:
         self.connection.join(name)

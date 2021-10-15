@@ -279,6 +279,7 @@ def remove(bot: DeltaBot, payload: str, message: Message, replies: Replies) -> N
 def _run_irc(bot: DeltaBot) -> None:
     while True:
         try:
+            bot.logger.debug("[bot] Connecting...")
             irc_bridge.start()
         except Exception as ex:
             bot.logger.exception("Error on IRC bridge: %s", ex)
