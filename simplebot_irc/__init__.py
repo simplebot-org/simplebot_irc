@@ -168,11 +168,14 @@ def names(message: Message, replies: Replies) -> None:
         replies.add(text="❌ This is not an IRC channel")
         return
 
-    members = "Members:\n"
+    html = "👥 Members: <ul>"
+    count = 0
     for m in sorted(irc_bridge.get_members(chan)):
-        members += f"• {m}\n"
+        html += f"<li>{m}</li>"
+        count += 1
+    html += "</ul>"
 
-    replies.add(text=members)
+    replies.add(text=f"👥 Members ({count})", html=html)
 
 
 @simplebot.command(name="/nick")
