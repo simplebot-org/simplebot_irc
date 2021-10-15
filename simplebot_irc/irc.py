@@ -26,6 +26,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
                 self._get_puppet(c.addr).channels.add(chan)
         for addr in self.puppets:
             self._get_connected_puppet(addr)
+            time.sleep(1)
 
     def _get_puppet(self, addr: str) -> irc.client.ServerConnection:
         cnn = self.puppets.get(addr)
@@ -66,6 +67,20 @@ class PuppetReactor(irc.client.SimpleIRCClient):
             text=" ".join(e.arguments), sender=sender, chat=self.dbot.get_chat(gid)
         )
         replies.send_reply_messages()
+
+    def _reconnect(self, conn, event) -> bool:
+        try:
+            conn.welcomed = False
+            if conn.addr in self.puppets:
+                self.dbot.logger.warning(
+                    f"Disconnected: {conn.get_nickname()} ({conn.addr})"
+                )
+                time.sleep(15)
+                self._get_connected_puppet(conn.addr)  # reconnect
+            return True
+        except irc.client.ServerConnectionError as err:
+            self.dbot.logger.error("[%s] %s", conn.addr, err)
+        return False
 
     def set_nick(self, addr: str, nick: str) -> None:
         self.puppets[addr].nick(nick + "|dc")
@@ -123,16 +138,11 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         self._irc2dc(conn.addr, event, impersonate=False)
 
     def on_disconnect(self, conn, event) -> None:
-        conn.welcomed = False
-        if conn.addr in self.puppets:
-            self.dbot.logger.warning(
-                f"Disconnected: {conn.get_nickname()} ({conn.addr})"
-            )
-            time.sleep(5)
-            self._get_connected_puppet(conn.addr)  # reconnect
+        while not self._reconnect(conn, event):
+            time.sleep(15)
 
     def on_error(self, conn, event) -> None:
-        self.dbot.logger.error("[%s] %s", conn.addr, ":".join(event.arguments))
+        self.dbot.logger.error("[%s] %s", conn.addr, event)
 
 
 class IRCBot(irc.bot.SingleServerIRCBot):
