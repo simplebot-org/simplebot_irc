@@ -189,7 +189,6 @@ class IRCBot(irc.bot.SingleServerIRCBot):
     def on_welcome(self, conn, event) -> None:
         for chan, _ in self.db.get_channels():
             conn.join(chan)
-        time.sleep(1)
         Thread(target=self.preactor.start, daemon=True).start()
 
     def on_action(self, conn, event) -> None:
