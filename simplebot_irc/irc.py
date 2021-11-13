@@ -216,7 +216,7 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 
     def _reconnect(self, conn, event) -> bool:
         try:
-            self.dbot.logger.warning(f"[bot] Reconnecting...")
+            self.dbot.logger.warning("[bot] Reconnecting...")
             time.sleep(15)
             conn.connect(self.server, self.port, self.nick, ircname=self.nick)
             return True
