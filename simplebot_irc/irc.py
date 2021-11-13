@@ -1,7 +1,7 @@
 import string
 import time
 from threading import Thread
-from typing import Dict
+from typing import Dict, Tuple
 
 import irc.bot
 import irc.client
@@ -18,7 +18,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         self.port = port
         self.dbot = dbot
         self.db = db
-        self.puppets: Dict[str, ServerConnection] = dict()
+        self.puppets: Dict[str, ServerConnection] = {}
         for chan, gid in db.get_channels():
             for c in dbot.get_chat(gid).get_contacts():
                 if dbot.self_contact == c:
@@ -69,7 +69,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         )
         replies.send_reply_messages()
 
-    def _reconnect(self, conn, event) -> bool:
+    def _reconnect(self, conn, _) -> bool:
         try:
             conn.welcomed = False
             if conn.addr in self.puppets:
@@ -108,7 +108,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
 
     # EVENTS:
 
-    def on_nicknameinuse(self, conn, event) -> None:
+    def on_nicknameinuse(self, conn, _) -> None:
         nick = self.db.get_nick(conn.addr)
         if len(nick) < 13:
             nick += "_"
@@ -118,7 +118,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         conn.nick(nick + "|dc")
 
     @staticmethod
-    def on_welcome(conn, event) -> None:
+    def on_welcome(conn, _) -> None:
         conn.welcomed = True
         for channel in conn.channels:
             conn.join(channel)
@@ -148,16 +148,15 @@ class PuppetReactor(irc.client.SimpleIRCClient):
 
 class IRCBot(irc.bot.SingleServerIRCBot):
     def __init__(
-        self, server: str, port: int, nick: str, db: DBManager, dbot: DeltaBot
+        self, server: Tuple[str, int], nick: str, db: DBManager, dbot: DeltaBot
     ) -> None:
         nick = sanitize_nick(nick)
         self.nick = nick
-        self.server = server
-        self.port = port
-        super().__init__([(server, port)], nick, nick)
+        self.server, self.port = server
+        super().__init__([(self.server, self.port)], nick, nick)
         self.dbot = dbot
         self.db = db
-        self.preactor = PuppetReactor(server, port, db, dbot)
+        self.preactor = PuppetReactor(self.server, self.port, db, dbot)
         self.nick_counter = 1
 
     def _irc2dc(self, event) -> None:
@@ -178,7 +177,7 @@ class IRCBot(irc.bot.SingleServerIRCBot):
         )
         replies.send_reply_messages()
 
-    def on_nicknameinuse(self, conn, event) -> None:
+    def on_nicknameinuse(self, conn, _) -> None:
         self.nick_counter += 1
         nick = f"{self.nick}{self.nick_counter}"
         if len(nick) > 16:
@@ -187,34 +186,34 @@ class IRCBot(irc.bot.SingleServerIRCBot):
             nick = self.nick
         conn.nick(nick)
 
-    def on_welcome(self, conn, event) -> None:
+    def on_welcome(self, conn, _) -> None:
         for chan, _ in self.db.get_channels():
             conn.join(chan)
         Thread(target=self.preactor.start, daemon=True).start()
 
-    def on_action(self, conn, event) -> None:
+    def on_action(self, _, event) -> None:
         event.arguments.insert(0, "/me")
         self._irc2dc(event)
 
-    def on_pubmsg(self, conn, event) -> None:
+    def on_pubmsg(self, _, event) -> None:
         self._irc2dc(event)
 
-    def on_notopic(self, conn, event) -> None:
+    def on_notopic(self, _, event) -> None:
         chan = self.channels[event.arguments[0]]
         chan.topic = "-"
 
-    def on_currenttopic(self, conn, event) -> None:
+    def on_currenttopic(self, _, event) -> None:
         chan = self.channels[event.arguments[0]]
         chan.topic = event.arguments[1]
 
-    def on_error(self, conn, event) -> None:
+    def on_error(self, _, event) -> None:
         self.dbot.logger.error("[bot] %s", event)
 
     def on_disconnect(self, conn, event) -> None:
         while not self._reconnect(conn, event):
             time.sleep(15)
 
-    def _reconnect(self, conn, event) -> bool:
+    def _reconnect(self, conn, _) -> bool:
         try:
             self.dbot.logger.warning("[bot] Reconnecting...")
             time.sleep(15)

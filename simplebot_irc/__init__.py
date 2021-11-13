@@ -47,7 +47,7 @@ def deltabot_start(bot: DeltaBot) -> None:
     nick = _getdefault(bot, "nick")
     host = _getdefault(bot, "host")
     port = int(_getdefault(bot, "port"))
-    irc_bridge = IRCBot(host, port, nick, db, bot)
+    irc_bridge = IRCBot((host, port), nick, db, bot)
     Thread(target=_run_irc, args=(bot,), daemon=True).start()
 
 
@@ -93,45 +93,47 @@ def dc2irc(bot: DeltaBot, message: Message) -> None:
         if pvchat:
             target = pvchat["nick"]
             addr = pvchat["addr"]
-    if target:
-        quoted_msg = message.quote
-        if quoted_msg:
-            quoted_addr = quoted_msg.get_sender_contact().addr
-            if quoted_addr == bot.self_contact.addr:
-                quoted_nick = quoted_msg.override_sender_name or irc_bridge.nick
-            else:
-                quoted_nick = db.get_nick(quoted_addr)
-            quote = " ".join(message.quoted_text.split("\n"))
-            if len(quote) > 40:
-                quote = quote[:40] + "..."
-            text = f"<{quoted_nick}: {quote}> "
-        else:
-            text = ""
-        if message.filename:
-            url = _getdefault(bot, "uploads_url", "").strip()
-            if url:
-                with open(message.filename, "rb") as file:
-                    url = _upload(message.filename, file, url)
-            if url:
-                text += url
-            else:
-                text += "[File]"
-            if message.text:
-                text += " - "
-        text += message.text
-        if not text:
-            return
+    if not target:
+        return
 
-        n = 450
-        url = _getdefault(bot, "uploads_url", "").strip()
-        if len(text) > n and url:
-            with io.StringIO(text) as file2:
-                url = _upload("long-text-message.txt", file2, url)
-            irc_bridge.preactor.send_message(addr, target, f"Long message: {url}")
+    quoted_msg = message.quote
+    if quoted_msg:
+        quoted_addr = quoted_msg.get_sender_contact().addr
+        if quoted_addr == bot.self_contact.addr:
+            quoted_nick = quoted_msg.override_sender_name or irc_bridge.nick
         else:
-            text = " ".join(text.split("\n"))
-            for fragment in [text[i : i + n] for i in range(0, len(text), n)]:
-                irc_bridge.preactor.send_message(addr, target, fragment)
+            quoted_nick = db.get_nick(quoted_addr)
+        quote = " ".join(message.quoted_text.split("\n"))
+        if len(quote) > 40:
+            quote = quote[:40] + "..."
+        text = f"<{quoted_nick}: {quote}> "
+    else:
+        text = ""
+    if message.filename:
+        url = _getdefault(bot, "uploads_url", "").strip()
+        if url:
+            with open(message.filename, "rb") as file:
+                url = _upload(message.filename, file, url)
+        if url:
+            text += url
+        else:
+            text += "[File]"
+        if message.text:
+            text += " - "
+    text += message.text
+    if not text:
+        return
+
+    n = 450
+    url = _getdefault(bot, "uploads_url", "").strip()
+    if len(text) > n and url:
+        with io.StringIO(text) as file2:
+            url = _upload("long-text-message.txt", file2, url)
+        irc_bridge.preactor.send_message(addr, target, f"Long message: {url}")
+    else:
+        text = " ".join(text.split("\n"))
+        for fragment in [text[i : i + n] for i in range(0, len(text), n)]:
+            irc_bridge.preactor.send_message(addr, target, fragment)
 
 
 @simplebot.command
@@ -284,7 +286,7 @@ def _run_irc(bot: DeltaBot) -> None:
         try:
             bot.logger.debug("[bot] Connecting...")
             irc_bridge.start()
-        except Exception as ex:
+        except Exception as ex:  # noqa
             bot.logger.exception("Error on IRC bridge: %s", ex)
             sleep(5)
 
