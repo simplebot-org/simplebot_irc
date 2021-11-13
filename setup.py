@@ -4,7 +4,8 @@ from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     MODULE_NAME = "simplebot_irc"
-    DESC = "A plugin for SimpleBot, a Delta Chat(http://delta.chat/) bot"
+    DESC = "IRC/DeltaChat bridge."
+    KEYWORDS = "simplebot plugin deltachat irc bridge"
 
     with open("README.rst", encoding="utf-8") as fh:
         long_description = fh.read()
@@ -24,7 +25,7 @@ if __name__ == "__main__":
         author="The SimpleBot Contributors",
         author_email="adbenitez@nauta.cu",
         url=f"https://github.com/simplebot-org/{MODULE_NAME}",
-        keywords="simplebot plugin deltachat",
+        keywords=KEYWORDS,
         license="MPL",
         classifiers=[
             "Development Status :: 3 - Alpha",
