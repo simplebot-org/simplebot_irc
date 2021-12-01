@@ -21,6 +21,14 @@ IRC/DeltaChat Bridge
 
 An IRC/DeltaChat bridge plugin for `SimpleBot`_.
 
+By default the bot will connect to ``irc.libera.chat:6667`` to change the IRC server::
+
+    simplebot -a bot@example.com db -s simplebot_irc/host "irc.example.com:6667"
+
+To change the bot's nick::
+
+    simplebot -a bot@example.com db -s simplebot_irc/nick "DeltaBridge"
+
 The bot will upload the files sent in the DeltaChat side to an uploads server (https://0x0.st/ by default), you can change the uploads server with::
 
     simplebot -a bot@example.com db -s simplebot_irc/uploads_url "https://example.com"

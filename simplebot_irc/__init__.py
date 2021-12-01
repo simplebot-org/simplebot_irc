@@ -36,8 +36,7 @@ irc_bridge: IRCBot
 def deltabot_init(bot: DeltaBot) -> None:
     _getdefault(bot, "uploads_url", "https://0x0.st/")
     _getdefault(bot, "nick", "DC-Bridge")
-    _getdefault(bot, "host", "irc.libera.chat")
-    _getdefault(bot, "port", "6667")
+    _getdefault(bot, "host", "irc.libera.chat:6667")
 
 
 @simplebot.hookimpl
@@ -45,8 +44,9 @@ def deltabot_start(bot: DeltaBot) -> None:
     global db, irc_bridge
     db = _get_db(bot)
     nick = _getdefault(bot, "nick")
-    host = _getdefault(bot, "host")
-    port = int(_getdefault(bot, "port"))
+    host_parts = _getdefault(bot, "host")
+    host = host_parts[0]
+    port = int(host_parts[1]) if len(host_parts) == 2 else 6667
     irc_bridge = IRCBot((host, port), nick, db, bot)
     Thread(target=_run_irc, args=(bot,), daemon=True).start()
 
