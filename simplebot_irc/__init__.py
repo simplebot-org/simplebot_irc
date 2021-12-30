@@ -48,6 +48,8 @@ def deltabot_start(bot: DeltaBot) -> None:
     host = host_parts[0]
     port = int(host_parts[1]) if len(host_parts) == 2 else 6667
     irc_bridge = IRCBot((host, port), nick, db, bot)
+    bot.logger.debug("Sleeping 10 seconds to avoid throttle...")
+    sleep(10)
     Thread(target=_run_irc, args=(bot,), daemon=True).start()
 
 
