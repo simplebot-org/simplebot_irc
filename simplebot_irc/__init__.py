@@ -44,7 +44,7 @@ def deltabot_start(bot: DeltaBot) -> None:
     global db, irc_bridge
     db = _get_db(bot)
     nick = _getdefault(bot, "nick")
-    host_parts = _getdefault(bot, "host")
+    host_parts = _getdefault(bot, "host").split(":")
     host = host_parts[0]
     port = int(host_parts[1]) if len(host_parts) == 2 else 6667
     irc_bridge = IRCBot((host, port), nick, db, bot)
