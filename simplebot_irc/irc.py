@@ -84,7 +84,10 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         return False
 
     def set_nick(self, addr: str, nick: str) -> None:
-        self.puppets[addr].nick(nick + "|dc")
+        if not self.puppets[addr]:
+            self.puppets[addr].nick(nick + "|dc")
+        else:
+            self.dbot.logger.warning(f"User has no puppet: {addr}")
 
     def join_channel(self, addr: str, channel: str) -> None:
         cnn = self._get_connected_puppet(addr)
