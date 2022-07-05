@@ -27,7 +27,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
         for addr in self.puppets:
             self.dbot.logger.debug("[%s] Connecting puppet...", addr)
             self._get_connected_puppet(addr)
-            time.sleep(1)
+            time.sleep(2)
 
     def _get_puppet(self, addr: str) -> irc.client.ServerConnection:
         cnn = self.puppets.get(addr)
@@ -121,6 +121,7 @@ class PuppetReactor(irc.client.SimpleIRCClient):
     def on_welcome(conn, _) -> None:
         conn.welcomed = True
         for channel in conn.channels:
+            time.sleep(2)
             conn.join(channel)
         while conn.pending_actions:
             args = conn.pending_actions.pop(0)
@@ -188,6 +189,7 @@ class IRCBot(irc.bot.SingleServerIRCBot):
 
     def on_welcome(self, conn, _) -> None:
         for chan, _ in self.db.get_channels():
+            time.sleep(2)
             conn.join(chan)
         Thread(target=self.preactor.start, daemon=True).start()
 
